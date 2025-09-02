@@ -56,6 +56,6 @@ rsconnect/
 *.pdf
 data/
 !presentations/*.pdf
-!optimizationwithr/*.rmd
+!optimizationwithr/*.Rmd
 !optimizationwithr/*.html
 !homework/*.pdf

@@ -1,0 +1,425 @@
+---
+title: "R'da Optimizasyon Yöntemleri"
+output: 
+  ioslides_presentation:
+    incremental: FALSE
+author: M. Sinan İyisoy
+license: "CC BY-SA"
+#date: "2023-12-07"
+widescreen: TRUE
+smaller: TRUE
+date: |
+  ![](logo.png){width=2in}
+---
+
+<style>
+.forceBreak { -webkit-column-break-after: always; break-after: column; }
+</style>
+<style> 
+  #optim5   { 
+    margin-top: -50px; 
+  } 
+  pre code {
+  white-space: pre-wrap;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Optimizasyon problemi
+
+ Elimizde 100m lik tel olduğunu varsayalım. Bu teli bahçenin çevresini kapatmakta kullanmak istiyoruz. Bu şekilde oluşturacağımız bahçelerden hangisinin alanı **en büyük** olur?
+
+Bu problemde olduğu gibi bir çok farklı türdeki problem optimizasyon yapmamızı gerekli kılar. Örneğin bir fonksiyonun köklerini bulmak isteyebiliriz. Ya da o fonksiyonu minimum ya da maksimum yapan değerleri.
+
+## Optimizasyon problemi örnek
+
+Bir beslenme uzmanı, iki farklı gıda türünü birleştirerek içeriğinde en az 8 birim A vitamini ve 10 birim C vitamini bulunduracak şekilde bir karışım elde etmek istiyor. 
+
+Birinci gıda türünde kilogram başına 2 birim A vitamini ve 1 birim C vitamini varken, ikincisinde kilogram başına 1 birim A vitamini ve 2 birim C vitamini vardır. 
+
+Birinci gıdanın kilogram maliyeti 50 lira, ikincisinin kilogram maliyeti ise 70 liradır. Karışımın maliyetini mümkün olduğunca düşük tutmak için, bu gıdalardan ne kadar almalıdır?
+
+## R'da optimizasyon paketleri
+
+ R'da çok fazla sayıda optimizasyon işi yapan paket vardır. CRAN taskview Optimization sayfasında bunların bir özeti sunulmuştur.
+ 
+https://cran.r-project.org/web/views/Optimization.html
+
+Bu paketler farklı farklı amaçlar için hazırlanmıştır. Farklı optimizasyon problemleri için farklı paketleri kullanmak gerekir.
+
+Base R daki optimizasyon fonksiyonları saymak istersek
+
+- optimize
+- optim
+- nlm, nlminb
+- constrOptim
+
+fonksiyonlarını söyleyebiliriz.
+
+
+## Optimizasyon problemi 1
+
+ Elimizde 100m lik tel olduğunu varsayalım. Bu tel ile bir bahçenin çevresini kapatmak istiyoruz. Bu şekilde oluşturacağımız bahçelerden hangisinin alanı **en büyük** olur?
+ 
+ Dikdörtgen şeklindeki bahçenin kenarları x,y uzunluğunda olsun. Çevresi $2(x+y)=100$ olacağından $y=50-x$ bulunur.
+ 
+ Alanı ise $xy=x(50-x)=50x-x^2$ şeklindedir.
+ Bu durumda alan fonksiyonu olan $50x-x^2$ yi **maximum** yapan x değerini bulmamız gerekmektedir.
+  
+ 
+## Optimizasyon problemi 1
+
+ x hakkında bildiğimiz şeyler $x>0$ ve $x<100$ olduğudur. 
+ 
+ Bunlara kısıt (constraint), alan fonksiyonuna ise
+ hedef fonksiyon (objective function) denir.
+
+
+## Optimizasyon problemi 1
+<div class="columns-2">
+$0-100$ arasında alan fonksiyonunun grafiğini çizerek en yüksek olduğu değerin $x=25$ olduğunu görebiliriz.
+
+```{r parabol2, echo = TRUE,fig.height=4,fig.width=5}
+curve(50*x-x^2, from = 0, to = 100)
+abline(v=25)
+
+
+
+```
+</div>
+
+
+## R'da alanı optimize edelim *optimize*
+
+Alan fonksiyonunu optimize etmek için optimize fonksiyonunu kullanabiliriz.
+
+```{r optim1, echo = TRUE,fig.height=4,fig.width=5}
+alan <- function(x) 50*(x)-x^2 
+opt<-optimize(alan,c(0,100),maximum=TRUE)
+opt
+```
+
+Hedef fonksiyonu maksimum yapan değer $x=25$ ve hedef fonksiyonun bu aralıktaki  maksimum değerinin $625$ olduğu görülür.
+
+## R'da alanı optimize edelim *optim*
+
+Ya da optim fonksiyonunu kullanarak aynı sonuca ulaşabiliriz. Aradaki fark optim fonksiyonunun çok değişkenli optimizasyon da yapabilmesidir.
+```{r optim2, echo = TRUE,fig.height=4,fig.width=5}
+alan <- function(x) 50*(x)-x^2 
+opt<-optim(0,alan,method = "CG",control=list(fnscale=-1))
+opt
+```
+
+## Optimizasyon problemi 2
+
+ Şimdi elimizdeki 100m lik tel ile bahçenin sadece çevresini değil üst kısmını da kapatmak istediğimizi varsayalım. Bu teli kullanarak dikdörtgenler prizması şeklinde bir şekil oluşturmak istiyoruz. Bu şekilde oluşturacağımız bahçelerden hangisinin hacmi **en büyük** olur?
+```{r optim21, echo = FALSE,warning=FALSE}
+options(rgl.printRglwidget = TRUE)
+#rgl::open3d()
+c3d <- rgl::cube3d(color="green", alpha=0.5,axes=FALSE)
+rgl::plot3d(c3d)
+#rgl::axis3d(edge="xyz",labels = FALSE)
+#rectmat <- rgl::identityMatrix()*c(1,2)
+#rect <- rgl::cube3d(rectmat)
+
+#rectmat <- rgl::identityMatrix()*c(10,20,5)
+#rect <- rgl::cube3d(rectmat,color="green", alpha=0.5,ticks=FALSE)
+#rgl::plot3d(rect)
+
+```
+## Optimizasyon problemi 2
+
+Dikdörtgenler prizması şeklindeki bahçenin kenarları x,y,z uzunluğunda olsun. Çevresi $4(x+y+z)=100$ olacağından $x+y+z=25$ ve $z=25-x-y$ bulunur.
+ 
+Bu durumda hacim fonksiyonu olan $xyz=xy(25-x-y)$ yi **maximum** yapan x ve y değerlerini bulmamız gerekir.
+
+
+## Optimizasyon problemi 2
+
+<div class="columns-2">
+İki değişken olduğu için optim kullanmalıyız.
+
+```{r optim3, echo = TRUE,fig.height=4,fig.width=5,}
+hacim <- function(x) 
+  x[1]*x[2]*(25-x[1]-x[2])
+opt<-optim(c(0,1),hacim,
+           control = list(fnscale = -1))
+opt$par
+opt$value
+```
+<p class="forceBreak"></p>
+Görüldüğü gibi optimum değerlerin x=8.33, y=8.33 ve z=8.33 olduğu bulunur. Yani aslında hacimin maksimize olduğu durum bir küptür.
+
+</div>
+
+
+
+## Optimizasyon problemi 2
+
+```{r optim5, echo = TRUE,fig.height=4,fig.width=5}
+surf <- function(x, y){x*y*(25-x-y)}
+x <- y <- seq(0, 100, length = 50)
+z <- outer(x, y, surf)
+plotly::plot_ly(x = x, y = x, z = z) |>  plotly::add_surface()
+```
+
+## Optimizasyon problemi 2
+
+optim fonksiyonunun parametreleri şu şekildedir.
+
+```{}
+
+optim(par, fn, gr = NULL, ...,
+method = c("Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN","Brent"),
+lower = -Inf, upper = Inf,
+control = list(), hessian = FALSE)
+
+```
+
+
+## Optimizasyon problemi 2 *nlm*
+
+Aynı problemi 3. bir yoldan çözelim. nlm fonksiyonu Newton metodunu kullanarak **minimizasyon** yapar.
+
+```{r optim6, echo = TRUE,fig.height=4,fig.width=5,}
+hacim <- function(x) -1*x[1]*x[2]*(25-x[1]-x[2])
+opt<-nlm(hacim,c(0,1))
+opt
+```
+
+
+## Optimizasyon problemi 2
+
+Aynı problemi 4. bir yoldan çözelim. Hacim fonksiyonunu bulurken $4(x+y+z)=100$ eşitliğini kullanarak z yerine $25-x-y$ yazmış ve $xyz=xy(25-x-y)$ bulmuştuk.
+Bu şekilde 1 değişkeni optimizasyon dışı bırakmıştık. 
+
+z'yi devre dışı bırakmadan problemi çözmek için kısıt (constraint) kullanmamız gerekir. Bu durumda hacim fonksiyonu $xyz$ yi **maximum** yapmalıyız öyle ki $4(x+y+z)=100$ olsun. İşte buradaki son eşitlik $4(x+y+z)=100$ bir kısıt ifadesidir.
+  
+
+## Optimizasyon problemi 2 *constrOptim*
+
+Yukarıda bahsedilen fonksiyonlar constrained optimization yapamazlar. Bu şekilde bir optimizasyon için base R'da constrOptim fonksiyonu kullanılabilir.
+
+Bizim kullanmak istediğimiz kısıt $4(x+y+z)=100$ ya da $x+y+z=25$ kısıtı bir **eşitlik kısıtı**(equality constraint) dır. $x+y+z<100$ gibi bir kısıt olsaydı buna **eşitsizlik kısıtı** diyecektik.
+
+Sorun şu ki 
+</br>
+![caption](resim1.png){width=60%}
+
+## Optimizasyon problemi 3 *constrOptim*
+
+constrOptim kullanabilmek için problemimizi değiştirelim. Yine hacmi $xyz$ maksimize etmek isteyelim, ama bu sefer kısıtımız  $x+y\le{z}$ olsun. Ayrıca problemin feasible olabilmesi için $0<x,y,z<30$ olma kısıtlarını da ekleyelim. Bunu aşağıdaki gibi yapabiliriz.
+
+```{r optim7, echo = TRUE,fig.height=4,fig.width=5,}
+hacim <- function(x) x[1]*x[2]*x[3]
+opt<-constrOptim(f = hacim,theta = c(0,0.1,0.1),grad=NULL, control = list(fnscale = -1),
+ui=rbind(c(-1,-1,1),c(-1,0,0),c(0,-1,0),c(0,0,-1),c(1,0,0),c(0,1,0),c(0,0,1)),
+ci = c(0,-30,-30,-30,0,0,0) - 1e-6)
+opt
+```
+
+## Optimizasyon problemi 3 *constrOptim*
+
+Kısıtılarımız $x+y\le{z}$ ve $0<x,y,z<30$ şeklinde basit kısıtlar olmasına rağmen neden bu kadar karmaşık ifadeler girdik diye düşünebilirsiniz.
+
+```{r optim8, echo = TRUE}
+ui=rbind(c(-1,-1,1),c(-1,0,0),c(0,-1,0),c(0,0,-1),c(1,0,0),c(0,1,0),c(0,0,1))
+```
+
+ifadesi aslında 
+$-x-y+z\ge{0}$ ve $-x>-30$,$-y>-30$,$-z>-30$,$x>0$,$y>0$,$z>0$ eşitsizliklerine karşılık gelir.
+
+```{r optim9, echo = TRUE}
+ci = c(0,-30,-30,-30,0,0,0) - 1e-6
+```
+ifadesi de eşitsizliklerin sağ tarafına aittir.
+-1e-6 çok küçük bir değeri çıkartarak algoritmanın çalışmasını sağlıyoruz. Başlangıç değerlerini seçmek de önemlidir. $ui*theta-ci\ge{0}$ olacak şekilde seçilmelidir.
+
+```{r optim10, echo = TRUE}
+theta = c(0,0.1,0.1)
+```
+
+## Optimizasyon paketleri
+
+Base R'daki bu paketler artık biraz eskimiştir. Bunların yerine modern paketler kullanmak daha uygundur. Örnek vermek gerekirse
+
+- optimx: Base R'daki fonksiyonlar için gelişmiş bir wrapper. Ek özellikleri var. 
+- ROI: R Optimization Infrastructure, R'daki optimizasyon işini soyutlayan nesne tabanlı bir yapı haline getirmeyi amaçlayan bir yapı.
+- CVXR: Disciplined Convex Optimization, Aynı ROI gibi convex optimizasyon için nesne tabanlı bir modelleme dili.
+- lpsolve,Rglpk: Linear Programming problemleri için geliştirilmiş paketlerden bazıları.
+
+Dahası için CRAN taskview e bakılabilir.
+
+## Optimx örneği (regresyon)
+
+MASS paketindeki Pima.tr verisinde 21 yaş üzerindeki Pima Indian kadınlarındaki glukoz, bmi, yaş, deri kıvrım kalınlığı, hamilelik sayısı gibi veriler vardır. Bu verisetini kullanarak glukoz değerlerini bmi,yaş ve skin değerlerinin bir fonksiyonu 
+
+$glu=\beta_0+\beta_1*age+\beta_2*bmi+\beta_3*skin$ 
+
+olarak yazmamızı sağlayan beta katsayılarını bulmak istiyoruz.
+
+Bu bir regresyondur ve aslında regresyon da bir optimizasyon problemidir. Hedef fonksiyonumuz artıkların kareler toplamıdır. Amacımız bu kareler toplamını minimize etmektir (least squares estimates of regression parameters).
+
+
+## Optimx örneği (regresyon)
+
+Optimx paketi ile bu işlemi yapalım. Aslında burada optimx fonksiyonuna özel bir işlem kullanmadık. Aynı kodu optim ile de çalıştırabiliriz.
+
+```{r optim11, echo = TRUE,warning=FALSE,fig.height=4,fig.width=5,}
+data(Pima.tr,package = "MASS")
+min_residuals <- function(data,par) {
+  with(data, sum((par[1]+par[2]*age+par[3]*bmi+par[4]*skin-glu)^2))}
+optimx::optimx(par=c(0,0,0,0), fn=min_residuals, data=Pima.tr)
+```
+
+## Optimx örneği (regresyon)
+
+Optimx sonuçlarında kullanılan algoritmalar (Nelder-Mead ve BFGS) ve elde edilen sonuçlar görülmektedir. p1-p4 değerleri bizim aradığımız katsayılardır. 
+
+```{r optim12, echo = FALSE,warning=FALSE,fig.height=4,fig.width=5,}
+data(Pima.tr,package = "MASS")
+min_residuals <- function(data,par) {
+  with(data, sum((par[1]+par[2]*age+par[3]*bmi+par[4]*skin-glu)^2))}
+optimx::optimx(par=c(0,0,0,0), fn=min_residuals, data=Pima.tr)
+```
+Bu katsayıları doğrusal regresyon komutu sonuçları ile karşılaştıralım.
+
+## Optimx örneği (regresyon)
+
+Aşağıda doğrusal regresyon komutu sonuçları görülmektedir. Karşılaştırdığımızda katsayıların doğrusal regresyon komutu sonuçları ile çok benzer olduğunu görürüz.
+
+```{r optim13, echo = FALSE,warning=FALSE,fig.height=4,fig.width=5,}
+data(Pima.tr,package = "MASS")
+summary(lm(glu~age+bmi+skin,data=Pima.tr))
+```
+
+## Nonlinear constrained optimization
+
+Constrained optimizasyonun ne olduğu görmüştük. 
+
+constrOptim paketi doğrusal eşitsizlik kısıtlarını kabul etmektedir. Yani $ax+by\ge{cz}$ şeklindeki kısıtlar. 
+
+Eğer kısitlarınız $ax^2+by^2\ge{cz^2}$ şeklinde ise bu tür **doğrusal olmayan kısıtlar**ı (nonlinear constraints) kullanabileceğiniz optimizer lar da vardır. 
+
+Örnek olarak alabama, nloptr, NlcOptim paketleri söylenebilir. 
+
+
+## Nloptr ile bir deneme
+
+Himmelbau fonksiyonunun $f(x,y)=(x^2+y-11)^2+(x+y^2-7)^2$ köklerini bulmak isteyelim. 
+
+```{r optim19, echo = FALSE,fig.height=4,fig.width=5}
+surf <- function(x, y) {
+  (x^2 + y - 11)^2 + (x + y^2 - 7)^2 -1  
+}
+
+x <- y <- seq(-5, 5, length = 50)
+z <- outer(x, y, surf)
+
+surface<-plotly::plot_ly(x = x, y = y, z = z) |> plotly::add_surface()
+
+pp <- expand.grid(x, y)
+colnames(pp) <- c('x', 'y')
+pp$z <- rep(0, nrow(pp))
+
+surface <- surface |>
+  plotly::add_trace(
+    type = "mesh3d",
+    x = pp$x,
+    y = pp$y,
+    z = pp$z,
+    color = I("rgba(138, 43, 226, 0.5)"),
+    opacity = 0.3
+  )
+
+surface
+```
+
+## Nloptr ile bir deneme Kök-1
+
+Başlangıç parametresi $x_0=(1,1)$ e karşılık gelen kök=(3,2)
+```{r optim15, echo = FALSE,warning=FALSE,fig.height=4,fig.width=5,}
+himmelbau <- function(x) (x[1]^2+x[2]-11)^2+(x[1]+x[2]^2-7)^2
+grad<-function(x) {c(2*(2*x[1]*(x[1]^2+x[2]-11)+x[1]+x[2]^2-7),
+2*(x[1]^2+2*x[2]*(x[1]+x[2]^2-7)+x[2]-11))}
+x0 <- c(1,1)
+opts <- list("algorithm"="NLOPT_LD_LBFGS",
+             "xtol_rel"=1.0e-8)
+res <- nloptr::nloptr( x0=x0, 
+               eval_f=himmelbau, 
+               eval_grad_f=grad,
+               opts=opts)
+res
+```
+
+## Nloptr ile bir deneme Kök-2
+
+Başlangıç parametresi $x_0=(1,-1)$ e karşılık gelen kök=(3.58,-1.84)
+```{r optim16, echo = FALSE,warning=FALSE,fig.height=4,fig.width=5,}
+himmelbau <- function(x) (x[1]^2+x[2]-11)^2+(x[1]+x[2]^2-7)^2
+grad<-function(x) {c(2*(2*x[1]*(x[1]^2+x[2]-11)+x[1]+x[2]^2-7),
+2*(x[1]^2+2*x[2]*(x[1]+x[2]^2-7)+x[2]-11))}
+x0 <- c(1,-1)
+opts <- list("algorithm"="NLOPT_LD_LBFGS",
+             "xtol_rel"=1.0e-8)
+res <- nloptr::nloptr( x0=x0, 
+               eval_f=himmelbau, 
+               eval_grad_f=grad,
+               opts=opts)
+res
+```
+
+
+## Nloptr ile bir deneme Kök-3
+
+Başlangıç parametresi $x_0=(-1,1)$ e karşılık gelen kök=(-2.80,3.13)
+```{r optim17, echo = FALSE,warning=FALSE,fig.height=4,fig.width=5,}
+himmelbau <- function(x) (x[1]^2+x[2]-11)^2+(x[1]+x[2]^2-7)^2
+grad<-function(x) {c(2*(2*x[1]*(x[1]^2+x[2]-11)+x[1]+x[2]^2-7),
+2*(x[1]^2+2*x[2]*(x[1]+x[2]^2-7)+x[2]-11))}
+x0 <- c(-1,1)
+opts <- list("algorithm"="NLOPT_LD_LBFGS",
+             "xtol_rel"=1.0e-8)
+res <- nloptr::nloptr( x0=x0, 
+               eval_f=himmelbau, 
+               eval_grad_f=grad,
+               opts=opts)
+res
+```
+
+
+## Nloptr ile bir deneme Kök-4
+
+Başlangıç parametresi $x_0=(-1,-1)$ e karşılık gelen kök=(-3.77,-3.28)
+```{r optim18, echo = FALSE,warning=FALSE,fig.height=4,fig.width=5,}
+himmelbau <- function(x) (x[1]^2+x[2]-11)^2+(x[1]+x[2]^2-7)^2
+grad<-function(x) {c(2*(2*x[1]*(x[1]^2+x[2]-11)+x[1]+x[2]^2-7),
+2*(x[1]^2+2*x[2]*(x[1]+x[2]^2-7)+x[2]-11))}
+x0 <- c(-1,-1)
+opts <- list("algorithm"="NLOPT_LD_LBFGS",
+             "xtol_rel"=1.0e-8)
+res <- nloptr::nloptr( x0=x0, 
+               eval_f=himmelbau, 
+               eval_grad_f=grad,
+               opts=opts)
+res
+```
+
+## Sonuç
+
+Optimx paketi ve içerisindeki optimx fonksiyonu constrained optimizasyon yapamadım. İnternette yaptığını söyleyenler var olsa da benim örneklerimde olmadı. Bu arada constrOptim paketinin dökümantasyonu da çok sınırlı. Nasıl yapıldığını anlamak için internet kaynaklarını iyice araştırmam gerekti. 
+
+Base R paketleri optimizasyon için kullanılabilir ama biraz eski oldukları görülmektedir. optimx daha yeni ve kullanımının daha kolay olduğunu söylemektedir. Her paketin farklı bir işlevi ve kabiliyeti olduğu unutulmamalıdır.
+
+
+## Teşekkürler {.flexbox .vcenter}
+
+
+<center>
+![](dipper.jpg){width=80%}
+</center>
+
+
