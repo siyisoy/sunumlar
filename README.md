@@ -1,6 +1,6 @@
 # Sunum dosyaları 
 
-Temel olarak biyoistatistik ile ilgili sunum dosyalarına ulaşabilirsiniz.
+Farklı konulardaki sunum dosyalarına ulaşabilirsiniz.
  
 
 ## License 
