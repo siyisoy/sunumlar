@@ -56,4 +56,6 @@ rsconnect/
 *.pdf
 data/
 !presentations/*.pdf
+!presentations/*.rmd
+!presentations/*.html
 !homework/*.pdf
